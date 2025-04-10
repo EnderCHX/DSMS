@@ -11,7 +11,6 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include <memory>
 #include <boost/asio.hpp>
 #include <boost/system.hpp>
 #include <nlohmann/json.hpp>
@@ -44,6 +43,7 @@ namespace message_hub {
     public:
         Client(boost::asio::ip::tcp::socket socket, boost::asio::io_context* ioc) : sock(std::move(socket)), buffer(1024), msg(""), timer(*ioc, heartbeat_interval) {
             this->ioc = ioc;
+            msg.reserve(1024);
         }
 
         auto start() -> void {
@@ -75,6 +75,7 @@ namespace message_hub {
                     } else {
                         msg += std::string(buffer.begin(), buffer.end());
                     }
+                    do_read();
                 }
             });
         }
@@ -132,7 +133,7 @@ namespace message_hub {
         auto do_accept() -> void {
             ac.async_accept([this](boost::system::error_code ec, boost::asio::ip::tcp::socket sock){
                 if (!ec) {
-                    auto client = new Client(std::move(sock), &ioc);
+                    auto client = new message_hub::Client(std::move(sock), &ioc);
                     client->start();
 
                     {
@@ -177,14 +178,25 @@ namespace message_hub {
             recv_thread = std::thread([&](){
                 while (true) {
                     while (!message_recv.empty()) {
-                        std::lock_guard<std::mutex> lock(message_recv_lock);
-                        auto msg = message_recv.front();
-                        message_recv.pop();
-                        std::cout << "recv: " << msg << std::endl;
-                        auto json_msg = json::parse(msg);
-                        if (json_msg["type"] == "event") {
-                            auto event_name = json_msg["event"];
+                        std::string msg;
+                        {
+                            std::lock_guard<std::mutex> lock(message_recv_lock);
+                            msg = message_recv.front();
+                            message_recv.pop();
                         }
+                        std::cout << "recv: " << msg << std::endl;
+                        
+                        // std::cout << "recv: " << msg << std::endl;
+                        // json json_msg;
+                        // try {
+                        //     json_msg = json::parse(msg);
+                        // } catch (json::parse_error &e) {
+                        //     std::cout << "parse error: " << e.what() << std::endl;
+                        //     continue;
+                        // }
+                        // if (json_msg["type"] == "event") {
+                        //     auto event_name = json_msg["event"];
+                        // }
                     }
                 }
             });
