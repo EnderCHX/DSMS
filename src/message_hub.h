@@ -165,7 +165,7 @@ namespace message_hub {
                         json msg = json::parse(message_send.front());
                         if (msg["option"] == "publish") {
                             if (msg["data"]["type"] == "register") {
-
+                                msg["data"]["event"];
                             }
                         } else if (msg["option"] == "subscribe") {
 
@@ -209,6 +209,8 @@ namespace message_hub {
             send_thread.join();
         }
     private:
+
+
         Server server;
         std::thread server_thread;
         std::thread send_thread;
