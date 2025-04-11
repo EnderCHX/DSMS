@@ -1,6 +1,11 @@
 #include "message_hub.h"
 
+
 auto main() -> int {
-    message_hub::Hub hub("0.0.0.0", 8080);
+    std::string addr = "0.0.0.0";
+    int port = 8080;
+    chx_log::Log logger;
+    logger.info(std::format("Server Start at {}:{}", addr, port));
+    message_hub::Hub hub(addr, port);
     return 0;
 }
