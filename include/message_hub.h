@@ -16,16 +16,16 @@
 #include <nlohmann/json.hpp>
 #include "log.h"
 
-namespace message_hub {
-
-    using json = nlohmann::json;
+namespace CHX {
+    namespace MessageHub {
+            using json = nlohmann::json;
 
     class Client;
     class Server;
     class Hub;
 
     extern json heartbeat_packet;
-    extern chx_log::Log logger;
+    extern CHX::Log logger;
 
     extern std::queue<std::string> message_send;
     extern std::mutex message_send_lock;
@@ -143,7 +143,7 @@ namespace message_hub {
         auto do_accept() -> void {
             ac.async_accept([this](boost::system::error_code ec, boost::asio::ip::tcp::socket sock){
                 if (!ec) {
-                    auto client = new message_hub::Client(std::move(sock), &ioc);
+                    auto client = new CHX::MessageHub::Client(std::move(sock), &ioc);
                     client->start();
 
                     {
@@ -242,5 +242,6 @@ namespace message_hub {
         std::thread recv_thread;
         std::thread heartbeat_thread;
     };
+    }
 }
 #endif //DISTRIBUTED_SIMULATION_MANAGEMENT_SYSTEM_MESSAGE_HUB_H_BAK

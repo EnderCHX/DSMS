@@ -25,7 +25,7 @@ inline void enable_ansi_escape() {}
 #include <mutex>
 #include <format>
 
-namespace chx_log {
+namespace CHX {
     extern const char* cBlue ;
     extern const char* cRed;
     extern const char* cGreen;
@@ -46,6 +46,7 @@ namespace chx_log {
         void debug(const std::string& str);
         void warn(const std::string& str);
     private:
+        auto msg(const std::string& level, const std::string& str) -> void;
         std::mutex cout_lock;
     };
 }

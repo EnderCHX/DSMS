@@ -4,7 +4,7 @@
 
 #include "log.h"
 
-namespace chx_log {
+namespace CHX {
     const char* cBlue    = "\033[1;34m";
     const char* cRed      ="\033[1;31m";
     const char* cGreen    ="\033[1;32m";
@@ -15,67 +15,22 @@ namespace chx_log {
     const char* cWhite    ="\033[1;37m";
     const char* cEnd      ="\033[0m";
     void Log::info(const std::string& str){
-        std::lock_guard<std::mutex> lock(cout_lock);
-        time_t now = time(0);
-        tm tm_now = *localtime(&now);
-        std::cout << std::format("{}[{}-{}-{}-{}:{}:{}]{} {}[INFO]{} {}{}{}\n",
-            cGreen,
-            tm_now.tm_year + 1900,
-            tm_now.tm_mon + 1,
-            tm_now.tm_mday,
-            tm_now.tm_hour,
-            tm_now.tm_min,
-            tm_now.tm_sec,
-            cEnd,
-            cBlue,
-            cEnd,
-            cCyan,
-            str,
-            cEnd);
+        msg("INFO", str);
     }
     void Log::warn(const std::string& str){
-        std::lock_guard<std::mutex> lock(cout_lock);
-        time_t now = time(0);
-        tm tm_now = *localtime(&now);
-        std::cout << std::format("{}[{}-{}-{}-{}:{}:{}]{} {}[WARN]{} {}{}{}\n",
-            cGreen,
-            tm_now.tm_year + 1900,
-            tm_now.tm_mon + 1,
-            tm_now.tm_mday,
-            tm_now.tm_hour,
-            tm_now.tm_min,
-            tm_now.tm_sec,
-            cEnd,
-            cYellow,
-            cEnd,
-            cCyan,
-            str,
-            cEnd);
+        msg("WARN", str);
     }
     void Log::error(const std::string& str){
-        std::lock_guard<std::mutex> lock(cout_lock);
-        time_t now = time(0);
-        tm tm_now = *localtime(&now);
-        std::cout << std::format("{}[{}-{}-{}-{}:{}:{}]{} {}[ERRO]{} {}{}{}\n",
-            cGreen,
-            tm_now.tm_year + 1900,
-            tm_now.tm_mon + 1,
-            tm_now.tm_mday,
-            tm_now.tm_hour,
-            tm_now.tm_min,
-            tm_now.tm_sec,
-            cEnd,
-            cRed,
-            cEnd,
-            cCyan,
-            str,
-            cEnd);
+        msg("ERROR", str);
     }
     void Log::debug(const std::string &str) {
+        msg("DEBUG", str);
+    }
+    auto Log::msg(const std::string &level, const std::string &str) -> void {
         std::lock_guard<std::mutex> lock(cout_lock);
         time_t now = time(0);
         tm tm_now = *localtime(&now);
-        std::cout << std::format("{}[{}-{}-{}-{}:{}:{}]{} {}[DBUG]{} {}{}{}\n",
+        std::cout << std::format("{}[{}-{}-{}-{}:{}:{}]{} {}[{}]{} {}{}{}\n",
             cGreen,
             tm_now.tm_year + 1900,
             tm_now.tm_mon + 1,
@@ -85,9 +40,11 @@ namespace chx_log {
             tm_now.tm_sec,
             cEnd,
             cBlack,
+            level,
             cEnd,
             cCyan,
             str,
             cEnd);
     }
+
 }
