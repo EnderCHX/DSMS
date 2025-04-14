@@ -14,16 +14,16 @@ namespace CHX {
     const char* cBlack    ="\033[1;30m";
     const char* cWhite    ="\033[1;37m";
     const char* cEnd      ="\033[0m";
-    void Log::info(const std::string& str){
+    void Log::Info(const std::string& str){
         msg("INFO", str);
     }
-    void Log::warn(const std::string& str){
+    void Log::Warn(const std::string& str){
         msg("WARN", str);
     }
-    void Log::error(const std::string& str){
+    void Log::Error(const std::string& str){
         msg("ERROR", str);
     }
-    void Log::debug(const std::string &str) {
+    void Log::Debug(const std::string &str) {
         msg("DEBUG", str);
     }
     auto Log::msg(const std::string &level, const std::string &str) -> void {

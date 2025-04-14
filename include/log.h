@@ -41,10 +41,10 @@ namespace CHX {
         Log() {
             enable_ansi_escape();
         }
-        void info(const std::string& str);
-        void error(const std::string& str);
-        void debug(const std::string& str);
-        void warn(const std::string& str);
+        void Info(const std::string& str);
+        void Error(const std::string& str);
+        void Debug(const std::string& str);
+        void Warn(const std::string& str);
     private:
         auto msg(const std::string& level, const std::string& str) -> void;
         std::mutex cout_lock;
