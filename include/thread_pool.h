@@ -9,13 +9,11 @@
 
 #include <vector>
 #include <queue>
-#include <memory>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
 #include <future>
 #include <functional>
-#include <stdexcept>
 
 namespace CHX {
 class ThreadPool {
@@ -24,8 +22,8 @@ class ThreadPool {
         ThreadPool(size_t);
         // 入队任务(传入函数和函数的参数)
         template<class F, class... Args>
-        auto enqueue(F&& f, Args&&... args) //任务管道函数
-            -> std::future<typename std::result_of<F(Args...)>::type>;   //利用尾置限定符  std::future用来获取异步任务的结果
+        auto enqueue(F&& f, Args&&... args)
+            -> std::future<std::invoke_result_t<F(Args...)>>;   //利用尾置限定符  std::future用来获取异步任务的结果
         // 析构
         ~ThreadPool();
     private:

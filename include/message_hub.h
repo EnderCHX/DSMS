@@ -5,13 +5,13 @@
 #ifndef DISTRIBUTED_SIMULATION_MANAGEMENT_SYSTEM_MESSAGE_HUB_H_BAK
 #define DISTRIBUTED_SIMULATION_MANAGEMENT_SYSTEM_MESSAGE_HUB_H_BAK
 
+
 #include <unordered_map>
 #include <unordered_set>
 #include <queue>
-#include <vector>
 #include <string>
+#include <utility>
 #include <boost/asio.hpp>
-#include <boost/system.hpp>
 #include <nlohmann/json.hpp>
 #include "log.h"
 
@@ -27,19 +27,19 @@ namespace CHX {
     extern json heartbeat_packet;
     extern CHX::Log logger;
 
-    extern std::queue<std::string> message_send;
-    extern std::mutex message_send_lock;
-    extern std::queue<std::pair<std::string, Client*>> message_recv;
-    extern std::mutex message_recv_lock;
+    extern std::queue<json> message_send;                       //message send queue
+    extern std::mutex message_send_lock;                               //message send queue lock
+    extern std::queue<std::pair<std::string, Client*>> message_recv;   //message receive queue
+    extern std::mutex message_recv_lock;                               //message receive queue lock
 
-    extern std::unordered_set<Client*> client_set;
-    extern std::mutex client_set_lock;
+    extern std::unordered_set<Client*> client_set;                     //connected clients set
+    extern std::mutex client_set_lock;                                 //connected clients set lock
 
-    extern std::queue<Client*> disconnected_client_queue;
+    extern std::queue<Client*> disconnected_client_queue;              //clients need to be deleted queue
     extern std::mutex disconnected_client_queue_lock;
 
-    extern std::unordered_map<Client*, std::vector<std::string>> event_publisher_map;
-    extern std::mutex event_publisher_map_lock;
+    // extern std::unordered_map<Client*, std::vector<std::string>> event_publisher_map; //publisher and it's event list
+    // extern std::mutex event_publisher_map_lock;
 
     extern std::unordered_map<std::string, std::unordered_set<Client*>> event_map;
     extern std::mutex event_map_lock;
@@ -53,9 +53,9 @@ namespace CHX {
         auto stop() -> void;
         auto addr() const -> std::string;
         auto port() const -> int;
+        auto do_write(std::string msg) ->void;
     private:
         auto do_read() ->void;
-        auto do_write(std::string msg) ->void;
         auto do_heartbeat() -> void;
         boost::asio::io_context* ioc;
         boost::asio::steady_timer timer;
@@ -83,11 +83,13 @@ namespace CHX {
         std::thread send_thread;
         std::thread recv_thread;
         std::thread heartbeat_thread;
+        // ThreadPool th_pool;
 
-        static auto handleMsg(json& msg, Client* client) -> void;
+        static auto handleClientClose(Client* client) -> void;
+        static auto handleMsg(json msg, Client* client) -> void;
 
-        static auto handlePublish(json& data, Client* client) -> void;
-        static auto handleSubscribe(json& data, Client* client) -> void;
+        static auto handlePublish(json data, Client* client) -> void;
+        static auto handleSubscribe(json data, Client* client) -> void;
      };
     }
 }

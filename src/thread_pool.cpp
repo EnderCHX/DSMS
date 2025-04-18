@@ -42,9 +42,9 @@ inline ThreadPool::ThreadPool(size_t threads)
 // 添加一个新的工作任务到线程池 add new work item to the pool
 template<class F, class... Args>
 auto ThreadPool::enqueue(F&& f, Args&&... args)
-    -> std::future<typename std::result_of<F(Args...)>::type>
+    -> std::future<typename std::invoke_result<F(Args...)>::type>
 {
-    using return_type = typename std::result_of<F(Args...)>::type;
+    using return_type = typename std::invoke_result<F(Args...)>::type;
     // 将任务函数和其参数绑定，构建一个packaged_task(packaged_task是对任务的一个抽象，咱们能够给其传递一个函数来完成其构造。以后将任务投递给任何线程去完成，经过packaged_task.get_future()方法获取的future来获取任务完成后的产出值)
     auto task = std::make_shared< std::packaged_task<return_type()> >(  //指向F函数的智能指针
             std::bind(std::forward<F>(f), std::forward<Args>(args)...)  //传递函数进行构造

@@ -6,7 +6,7 @@
 
 namespace CHX {
     namespace MessageHub {
-        std::queue<std::string> message_send = std::queue<std::string>();
+        std::queue<json> message_send = std::queue<json>();
         std::mutex message_send_lock;
         std::queue<std::pair<std::string, Client*>> message_recv = std::queue<std::pair<std::string, Client*>>();
         std::mutex message_recv_lock;
@@ -17,8 +17,8 @@ namespace CHX {
         std::queue<Client*> disconnected_client_queue = std::queue<Client*>();
         std::mutex disconnected_client_queue_lock;
 
-        std::unordered_map<Client*, std::vector<std::string>> event_publisher_map = std::unordered_map<Client*, std::vector<std::string>>();
-        std::mutex event_publisher_map_lock;
+        // std::unordered_map<Client*, std::vector<std::string>> event_publisher_map = std::unordered_map<Client*, std::vector<std::string>>();
+        // std::mutex event_publisher_map_lock;
 
         std::unordered_map<std::string, std::unordered_set<Client*>> event_map = std::unordered_map<std::string, std::unordered_set<Client*>>();
         std::mutex event_map_lock;
@@ -69,8 +69,6 @@ namespace CHX {
         }
         auto Client::do_write(std::string msg) -> void {
             try {
-                auto index = std::find(msg.begin(), msg.end(), '\n');
-                msg.replace(index, msg.end(), "");
                 sock.async_write_some(boost::asio::buffer(msg), [this](boost::system::error_code ec, size_t /*length*/) {});
             } catch (...) {
                 logger.Error(std::format("write error -> {}:{}", addr(), port()));
@@ -111,14 +109,14 @@ namespace CHX {
         auto Server::do_accept() -> void {
             ac.async_accept([this](boost::system::error_code ec, boost::asio::ip::tcp::socket sock){
                 if (!ec) {
-                    auto client = new CHX::MessageHub::Client(std::move(sock), &ioc);
-                    client->start();
+                    auto client = Client(std::move(sock), &ioc);
+                    client.start();
 
                     {
-                        std::lock_guard<std::mutex> lock(client_set_lock);
-                        client_set.insert(client);
+                        std::lock_guard lock(client_set_lock);
+                        client_set.insert(&client);
                     }
-                    logger.Info(std::format("new client connected -> {}:{}", client->addr(), client->port()));
+                    logger.Info(std::format("new client connected -> {}:{}", client.addr(), client.port()));
                     logger.Info(std::format("client count: {}", client_set.size()));
                     do_accept();
                 }
@@ -135,14 +133,12 @@ namespace CHX {
             send_thread = std::thread([&](){
                 while (true) {
                     while (!message_send.empty()) {
-                        std::lock_guard<std::mutex> lock(message_send_lock);
-                        json msg = json::parse(message_send.front());
-                        if (msg["option"] == "publish") {
-                            if (msg["data"]["type"] == "register") {
-                                msg["data"]["event"];
+                        std::lock_guard lock(message_send_lock);
+                        auto msg = message_send.front();
+                        if (auto event = msg["data"]["event"].dump(); event_map.contains(event)) {
+                            for (auto clients = event_map[event]; auto client : clients) {
+                                client->do_write(msg.dump()+"\n");
                             }
-                        } else if (msg["option"] == "subscribe") {
-
                         }
                         message_send.pop();
                     }
@@ -151,13 +147,13 @@ namespace CHX {
             recv_thread = std::thread([&](){
                 while (true) {
                     while (!message_recv.empty()) {
-                        std::pair<std::string, CHX::MessageHub::Client*> msg;
+                        std::pair<std::string, Client*> msg;
                         {
-                            std::lock_guard<std::mutex> lock(message_recv_lock);
+                            std::lock_guard lock(message_recv_lock);
                             msg = message_recv.front();
                             message_recv.pop();
                         }
-                        logger.Info(std::format("pop queue message_recv msg -> {}", msg));
+                        logger.Info(std::format("pop queue message_recv msg -> {}", msg.first));
                         try {
                             json json_msg = json::parse(std::string(msg.first));
                             handleMsg(json_msg, msg.second);
@@ -174,12 +170,11 @@ namespace CHX {
             heartbeat_thread = std::thread([&](){
                 while (true) {
                     while (!disconnected_client_queue.empty()) {
-                        std::lock_guard<std::mutex> lock1(disconnected_client_queue_lock);
+                        std::lock_guard lock1(disconnected_client_queue_lock);
                         auto client = disconnected_client_queue.front();
                         disconnected_client_queue.pop();
-
                         {
-                            std::lock_guard<std::mutex> lock(client_set_lock);
+                            std::lock_guard lock(client_set_lock);
                             client_set.erase(client);
                         }
                         logger.Info(std::format("remove {}:{} from clients_pool", client->addr(), client->port()));
@@ -195,13 +190,26 @@ namespace CHX {
             send_thread.join();
         }
 
-        auto Hub::handleMsg(json &msg, Client *client) -> void {
+        auto Hub::handleClientClose(Client *client) -> void {
+            client->stop();
+        }
+
+
+        auto Hub::handleMsg(json msg, Client *client) -> void {
             if (!msg.contains("option")) {return;}
-            if (msg["option"] == "publish") { handlePublish(msg["data"], client);}
+            if (msg["option"] == "publish") { handlePublish(msg, client);}
             if (msg["option"] == "subscribe") { handleSubscribe(msg["data"], client);}
         }
-        auto Hub::handlePublish(json& data, Client *client) -> void {}
-        auto Hub::handleSubscribe(json& data, Client *client) -> void {
+        auto Hub::handlePublish(json msg, Client *client) -> void {
+            if (!msg["data"].contains("event")) {
+                return;
+            }
+            {
+                std::lock_guard lock(message_send_lock);
+                message_send.emplace(msg);
+            }
+        }
+        auto Hub::handleSubscribe(json data, Client *client) -> void {
             if (!event_map.contains(data["event"])) {
                 return;
             }
